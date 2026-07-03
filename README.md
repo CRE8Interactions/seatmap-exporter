@@ -69,6 +69,20 @@ Open http://localhost:3939, upload your SVG, and use the preview to verify seat 
 
 Use the **Sell order** panel to drag a hotspot onto the stage (same workflow as svg_processor). Seats are colored red-to-purple by distance from the hotspot; closest seats sell first. Multi-floor venues can assign sections per floor before placing a hotspot for each floor. Download JSON includes row and section `sortOrder` values ready for admin import.
 
+## DigitalOcean App Platform
+
+Deploy as a **Web Service**, not a Static Site. The preview UI needs the Node server for `POST /api/process`.
+
+1. Component type: **Web Service**
+2. Build command: `npm install`
+3. Run command: `npm start` (runs `node server.js`)
+4. HTTP port: `8080` (App Platform sets `PORT` automatically)
+5. Health check path: `/api/health`
+
+If the app is deployed as a Static Site (or only the `public/` folder is served), uploads fail with `Unexpected token '<'` because `/api/process` returns `index.html` instead of JSON.
+
+See `.do/app.yaml` for a starter app spec.
+
 ## CLI export
 
 ```bash

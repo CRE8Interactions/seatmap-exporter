@@ -12,8 +12,11 @@ const { generateSectionHighlights } = require("./src/generateSectionHighlights")
 const app = express();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 const PORT = process.env.PORT || 3939;
+const publicDir = path.join(__dirname, "public");
 
-app.use(express.static(path.join(__dirname, "public")));
+app.get("/api/health", (_req, res) => {
+  res.json({ ok: true });
+});
 
 app.post("/api/process", upload.single("svg"), (req, res) => {
   try {
@@ -79,6 +82,12 @@ app.post("/api/process", upload.single("svg"), (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.error(`seatmap-export preview: http://localhost:${PORT}`);
+app.use(express.static(publicDir));
+
+app.get("*", (_req, res) => {
+  res.sendFile(path.join(publicDir, "index.html"));
+});
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.error(`seatmap-export preview: http://0.0.0.0:${PORT}`);
 });

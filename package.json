@@ -6,6 +6,7 @@
     "seatmap-export": "./bin/export.js"
   },
   "scripts": {
+    "start": "node server.js",
     "export": "node bin/export.js",
     "preview": "node server.js",
     "test:mexican": "node bin/export.js ../svg-map-checker/public/pa-mexican-concert.svgqc -o /tmp/mexican-mapping.json",

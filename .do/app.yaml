@@ -1,0 +1,18 @@
+name: seatmap-export
+region: nyc
+services:
+  - name: web
+    github:
+      repo: YOUR_GITHUB_ORG/seatmap-export
+      branch: main
+      deploy_on_push: true
+    source_dir: /
+    build_command: npm install
+    run_command: npm start
+    http_port: 8080
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    health_check:
+      http_path: /api/health
+    routes:
+      - path: /

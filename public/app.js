@@ -57,6 +57,12 @@ processBtn.addEventListener("click", async () => {
       method: "POST",
       body: formData,
     });
+    const contentType = response.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      throw new Error(
+        "Server returned HTML instead of JSON. The API is not running — deploy as a Web Service with `npm start`, not as a Static Site."
+      );
+    }
     const payload = await response.json();
     if (!response.ok) {
       throw new Error(payload.error || "Processing failed.");

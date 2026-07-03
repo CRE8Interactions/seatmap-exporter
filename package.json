@@ -1,0 +1,26 @@
+{
+  "name": "seatmap-export",
+  "version": "1.0.0",
+  "description": "Convert Blocktickets seatmap SVG files to admin/frontend mapping JSON",
+  "bin": {
+    "seatmap-export": "./bin/export.js"
+  },
+  "scripts": {
+    "export": "node bin/export.js",
+    "preview": "node server.js",
+    "test:mexican": "node bin/export.js ../svg-map-checker/public/pa-mexican-concert.svgqc -o /tmp/mexican-mapping.json",
+    "test:raw-mexican": "node bin/export.js /Users/chazhaskins/Downloads/Mexican-Heritage-12-tables.svg -o output/mexican-heritage-12-tables.json --background output/mexican-heritage-background.png --meta output/mexican-heritage-meta.json --pretty --stats",
+    "audit": "node scripts/audit-mapping.js"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
+    "@xmldom/xmldom": "^0.8.10",
+    "express": "^4.21.2",
+    "multer": "^1.4.5-lts.2",
+    "uuid": "^9.0.1"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "private": true
+}

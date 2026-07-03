@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Seatmap Export Preview</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Seatmap Export Preview</h1>
+      <p>Upload an SVG to preview mapping JSON, generate a background PNG, and download exports.</p>
+    </header>
+
+    <section class="panel upload-panel">
+      <label class="file-label">
+        <span>Seatmap SVG</span>
+        <input id="svgInput" type="file" accept=".svg,.svgqc" />
+      </label>
+      <button id="processBtn" type="button" disabled>Process SVG</button>
+      <p id="status" class="status">Choose an SVG to begin.</p>
+    </section>
+
+    <section class="panel ga-capacity-panel hidden" id="gaCapacityPanel">
+      <h2>GA section capacity</h2>
+      <p class="ga-capacity-intro">
+        The SVG defines GA areas automatically (for example club, ga, suites). Set how many sellable spots each area should have before downloading JSON.
+      </p>
+      <div id="gaCapacityList" class="ga-capacity-list"></div>
+    </section>
+
+    <section class="panel stats-panel hidden" id="statsPanel">
+      <h2>Parse stats</h2>
+      <pre id="stats"></pre>
+    </section>
+
+    <section class="panel preview-panel hidden" id="previewPanel">
+      <div class="preview-header">
+        <h2>Seatmap preview</h2>
+        <div class="preview-actions">
+          <button id="downloadJsonBtn" type="button">Download JSON</button>
+          <button id="downloadPngBtn" type="button">Download background PNG</button>
+          <button id="downloadBgSvgBtn" type="button">Download background SVG</button>
+        </div>
+      </div>
+      <div class="preview-viewport" id="previewViewport">
+        <div class="preview-viewport-toolbar">
+          <button type="button" data-zoom="out" aria-label="Zoom out">−</button>
+          <button type="button" data-zoom="reset">Fit</button>
+          <button type="button" data-zoom="in" aria-label="Zoom in">+</button>
+          <span class="zoom-label" data-zoom-label>100%</span>
+        </div>
+        <div class="preview-viewport-stage" id="previewStage">
+          <svg id="previewSvg" xmlns="http://www.w3.org/2000/svg">
+            <image id="backgroundImage" href="" preserveAspectRatio="none" />
+            <g id="sectionLayer"></g>
+            <g id="seatLayer"></g>
+          </svg>
+          <div id="seatTooltip" class="seat-tooltip hidden" role="status"></div>
+        </div>
+      </div>
+      <p class="hint">
+        All seats are shown by default. Click any seat to verify section, row, and seat numbers. Scroll to zoom, drag to pan, or use the controls above. GA sections show as blue overlays.
+      </p>
+      <pre id="dimensions"></pre>
+    </section>
+
+    <section class="panel preview-panel hidden" id="highlightsPanel">
+      <div class="preview-header">
+        <h2>Section highlights</h2>
+        <div class="preview-actions">
+          <label class="inline-label highlight-picker">
+            <span>Section</span>
+            <select id="highlightSectionSelect"></select>
+          </label>
+          <button id="downloadHighlightsZipBtn" type="button">Download highlights ZIP</button>
+        </div>
+      </div>
+      <div class="highlight-preview-wrap">
+        <img id="highlightPreviewImage" alt="Section highlight preview" />
+      </div>
+      <p class="hint">
+        One PNG per section for the purchase flow (<code>venues/&lt;slug&gt;/highlights/&lt;section&gt;.png</code>). Each image shows the full map with that section highlighted in blue and a callout circle.
+      </p>
+    </section>
+
+    <section class="panel preview-panel hidden" id="sectionPreviewPanel">
+      <div class="preview-header">
+        <h2>Section preview</h2>
+      </div>
+      <div class="preview-viewport" id="sectionPreviewViewport">
+        <div class="preview-viewport-toolbar">
+          <button type="button" data-zoom="out" aria-label="Zoom out">−</button>
+          <button type="button" data-zoom="reset">Fit</button>
+          <button type="button" data-zoom="in" aria-label="Zoom in">+</button>
+          <span class="zoom-label" data-zoom-label>100%</span>
+        </div>
+        <div class="preview-viewport-stage">
+          <svg id="sectionPreviewSvg" xmlns="http://www.w3.org/2000/svg"></svg>
+        </div>
+      </div>
+      <p class="hint">
+        Section labels use the same sizing rules as the frontend purchase flow. Scroll to zoom, drag to pan, or use the controls above. Click Fit to reset.
+      </p>
+    </section>
+
+    <section class="panel sell-order-panel hidden" id="sellOrderPanel">
+      <div class="preview-header">
+        <h2>Sell order</h2>
+        <div class="sell-order-legend">
+          <span>Sell first</span>
+          <span class="legend-gradient" aria-hidden="true"></span>
+          <span>Sell last</span>
+        </div>
+      </div>
+
+      <div class="sell-order-controls">
+        <label class="inline-label">
+          Floors
+          <input id="floorCount" type="number" min="1" value="1" />
+        </label>
+        <button id="startSellOrderBtn" type="button">Set sell order</button>
+        <button id="resetSellOrderBtn" type="button" class="secondary-btn" disabled>Reset hotspot</button>
+      </div>
+
+      <div id="floorSetupPanel" class="floor-setup hidden"></div>
+
+      <div class="sell-order-viewport hidden" id="sellOrderViewport">
+        <div class="preview-viewport-toolbar">
+          <button type="button" data-zoom="out" aria-label="Zoom out">−</button>
+          <button type="button" data-zoom="reset">Fit</button>
+          <button type="button" data-zoom="in" aria-label="Zoom in">+</button>
+          <span class="zoom-label" data-zoom-label>100%</span>
+        </div>
+        <div class="preview-viewport-stage" id="sellOrderStage">
+          <svg id="sellOrderSvg" xmlns="http://www.w3.org/2000/svg">
+            <image id="sellOrderBackground" href="" preserveAspectRatio="none" />
+            <g id="sellOrderSeatLayer"></g>
+            <g id="sellOrderSectionLayer"></g>
+            <g id="sellOrderHotspotLayer"></g>
+          </svg>
+          <div id="sellOrderHotspotHandle" class="sell-order-hotspot hidden" draggable="true">
+            <div class="sell-order-hotspot-inner"></div>
+          </div>
+        </div>
+      </div>
+
+      <p id="sellOrderStatus" class="hint">
+        Drag the hotspot onto the stage (or nearest seats) to set sell order. Seats closest to the hotspot sell first.
+      </p>
+    </section>
+
+    <svg id="measureSvg" xmlns="http://www.w3.org/2000/svg" class="measure-svg" aria-hidden="true"></svg>
+
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <script src="/svgViewport.js"></script>
+    <script src="/sectionLabels.js"></script>
+    <script src="/sellOrder.js"></script>
+    <script src="/sellOrderUi.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

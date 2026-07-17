@@ -175,8 +175,34 @@ function seatMetricsFromRect(rectEl) {
 }
 
 function seatMetricsFromPath(pathEl) {
-  const bounds = pathBounds(getAttr(pathEl, "d"));
+  const d = getAttr(pathEl, "d");
+  const bounds = pathBounds(d);
   if (!bounds) return null;
+
+  // Seat circles are always SEAT_SIZE. pathBounds only samples command endpoints,
+  // so some Illustrator arc constructions (e.g. bottom→left quarter-arc starts)
+  // report ~radius instead of diameter and previously rendered at half size.
+  if (/[aA]/.test(d)) {
+    const moveMatch = d.match(/^M\s*([-\d.]+)(?:\s+|,)([-\d.]+)/i);
+    if (moveMatch) {
+      const mx = parseFloat(moveMatch[1]);
+      const my = parseFloat(moveMatch[2]);
+      // Standard seat paths place M at the bottom of the circle.
+      return {
+        cx: mx,
+        cy: my - SEAT_SIZE,
+        w: SEAT_SIZE,
+        h: SEAT_SIZE,
+      };
+    }
+    return {
+      cx: bounds.minX,
+      cy: bounds.minY,
+      w: SEAT_SIZE,
+      h: SEAT_SIZE,
+    };
+  }
+
   return {
     cx: bounds.minX,
     cy: bounds.minY,

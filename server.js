@@ -7,10 +7,15 @@ const { loadUploadedSvg } = require("./src/loadInput");
 const { generateBackgroundSvg } = require("./src/generateBackground");
 const { getSvgDimensions } = require("./src/svgDimensions");
 const { renderBackgroundPng } = require("./src/renderBackgroundPng");
-const { generateSectionHighlights } = require("./src/generateSectionHighlights");
+const {
+  generateSectionHighlights,
+} = require("./src/generateSectionHighlights");
 
 const app = express();
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 },
+});
 const PORT = process.env.PORT || 3939;
 const publicDir = path.join(__dirname, "public");
 
@@ -57,7 +62,7 @@ app.post("/api/process", upload.single("svg"), (req, res) => {
           Object.entries(highlights).map(([filename, png]) => [
             filename.replace(/\.png$/i, ""),
             png.toString("base64"),
-          ])
+          ]),
         );
         stats.sectionHighlightCount = Object.keys(sectionHighlights).length;
       } catch (highlightError) {

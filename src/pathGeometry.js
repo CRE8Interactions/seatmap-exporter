@@ -1,4 +1,4 @@
-const ARC_RE = /a4\.1 4\.1/g;
+const ARC_RE = /a4\.1 4\.1/;
 
 function tokenizePath(d) {
   if (!d) return [];
@@ -81,14 +81,17 @@ function pathPoints(d) {
       case "a": {
         const nums = [];
         while (i < tokens.length && tokens[i].type === "num") nums.push(read());
-        if (cmd === "A") {
-          x = nums[5];
-          y = nums[6];
-        } else {
-          x += nums[5];
-          y += nums[6];
+        // SVG allows multiple arc segments after one A/a command (7 args each).
+        for (let offset = 0; offset + 6 < nums.length; offset += 7) {
+          if (cmd === "A") {
+            x = nums[offset + 5];
+            y = nums[offset + 6];
+          } else {
+            x += nums[offset + 5];
+            y += nums[offset + 6];
+          }
+          points.push({ x, y });
         }
-        points.push({ x, y });
         break;
       }
       default: {
@@ -97,16 +100,18 @@ function pathPoints(d) {
         const nums = [];
         while (i < tokens.length && tokens[i].type === "num") nums.push(read());
         if (argCount && nums.length >= argCount) {
-          const endX = nums[argCount - 2];
-          const endY = nums[argCount - 1];
-          if (cmd === upper) {
-            x = endX;
-            y = endY;
-          } else {
-            x += endX;
-            y += endY;
+          for (let offset = 0; offset + argCount - 1 < nums.length; offset += argCount) {
+            const endX = nums[offset + argCount - 2];
+            const endY = nums[offset + argCount - 1];
+            if (cmd === upper) {
+              x = endX;
+              y = endY;
+            } else {
+              x += endX;
+              y += endY;
+            }
+            points.push({ x, y });
           }
-          points.push({ x, y });
         }
         break;
       }
@@ -209,12 +214,14 @@ function extractCircleCenters(d) {
       case "a": {
         const nums = [];
         while (i < tokens.length && tokens[i].type === "num") nums.push(read());
-        if (cmd === "A") {
-          x = nums[5];
-          y = nums[6];
-        } else {
-          x += nums[5];
-          y += nums[6];
+        for (let offset = 0; offset + 6 < nums.length; offset += 7) {
+          if (cmd === "A") {
+            x = nums[offset + 5];
+            y = nums[offset + 6];
+          } else {
+            x += nums[offset + 5];
+            y += nums[offset + 6];
+          }
         }
         break;
       }
@@ -224,14 +231,16 @@ function extractCircleCenters(d) {
         const nums = [];
         while (i < tokens.length && tokens[i].type === "num") nums.push(read());
         if (argCount && nums.length >= argCount) {
-          const endX = nums[argCount - 2];
-          const endY = nums[argCount - 1];
-          if (cmd === upper) {
-            x = endX;
-            y = endY;
-          } else {
-            x += endX;
-            y += endY;
+          for (let offset = 0; offset + argCount - 1 < nums.length; offset += argCount) {
+            const endX = nums[offset + argCount - 2];
+            const endY = nums[offset + argCount - 1];
+            if (cmd === upper) {
+              x = endX;
+              y = endY;
+            } else {
+              x += endX;
+              y += endY;
+            }
           }
         }
         break;
@@ -316,6 +325,18 @@ function isSeatPath(pathEl) {
 }
 
 function extractSeatFromCirclePath(d) {
+  const moveMatch = (d || "").match(/^M\s*([-\d.]+)(?:\s+|,)([-\d.]+)/i);
+  if (moveMatch) {
+    const mx = parseFloat(moveMatch[1]);
+    const my = parseFloat(moveMatch[2]);
+    return {
+      cx: mx,
+      cy: my - SEAT_SIZE,
+      w: SEAT_SIZE,
+      h: SEAT_SIZE,
+    };
+  }
+
   const bounds = pathBounds(d);
   if (!bounds) return null;
 
@@ -352,6 +373,10 @@ function isLabelBackdropPath(d) {
   return !/[CcSsQqTtAa]/.test(d.replace(/\s+/g, ""));
 }
 
+function isIdentifierSizedBounds(bounds) {
+  return bounds && bounds.h <= 140 && bounds.w <= 200;
+}
+
 function resolveCoverPath(d) {
   const subpaths = splitPathSubpaths(d);
   if (!subpaths.length) {
@@ -370,11 +395,20 @@ function resolveCoverPath(d) {
 
   scored.sort((a, b) => b.area - a.area);
   const primary = scored[0];
+
+  // Bowl covers are usually one large tile + a small label glyph. GA floors
+  // are often exported as many large tiles in one compound path — keep them.
+  const largeSubpaths = scored.filter(
+    (entry) => !isIdentifierSizedBounds(entry.bounds)
+  );
+  if (largeSubpaths.length > 1) {
+    return { path: d, identifierPath: null };
+  }
+
   const identifierCandidates = scored.filter(
     (entry) =>
       entry !== primary &&
-      entry.bounds.h <= 140 &&
-      entry.bounds.w <= 200 &&
+      isIdentifierSizedBounds(entry.bounds) &&
       !isLabelBackdropPath(entry.path)
   );
 

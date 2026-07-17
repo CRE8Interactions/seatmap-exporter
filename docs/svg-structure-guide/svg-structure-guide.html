@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Seatmap SVG Structure Guide — Blocktickets</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@700&family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --primary: #5ab6f8;
+      --primary-dark: #3e8bf7;
+      --seat-blue: #3358D4;
+      --tertiary: #9757d7;
+      --dark: #23262f;
+      --dark-soft: #353945;
+      --green: #45b26b;
+      --danger: #ef466f;
+      --orange: #ff7a00;
+      --bg: #f4f5f6;
+      --white: #fcfcfd;
+      --text: #23262f;
+      --muted: #777e90;
+      --border: #e6e8ec;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    h1, h2, h3, h4, .cover h1, .section-tag { font-family: 'DM Sans', sans-serif; }
+    code, .mono, pre { font-family: 'JetBrains Mono', monospace; }
+    .page {
+      width: 816px;
+      min-height: 1056px;
+      margin: 0 auto;
+      background: var(--white);
+      position: relative;
+      overflow: hidden;
+      page-break-after: always;
+    }
+    .page:last-child { page-break-after: auto; }
+    .cover {
+      background: var(--dark);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 60px 48px;
+      position: relative;
+    }
+    .cover::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(51,88,212,0.4) 0%, rgba(90,182,248,0.2) 40%, rgba(35,38,47,0) 70%);
+      pointer-events: none;
+    }
+    .cover::after {
+      content: "";
+      position: absolute;
+      width: 420px;
+      height: 420px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(90,182,248,0.25) 0%, transparent 70%);
+      top: -80px;
+      right: -100px;
+      pointer-events: none;
+    }
+    .cover > * { position: relative; z-index: 1; }
+    .cover-logo { margin-bottom: 36px; }
+    .cover-logo svg { height: 40px; width: auto; }
+    .cover-badge {
+      background: rgba(90,182,248,0.15);
+      border: 2px solid rgba(90,182,248,0.45);
+      color: var(--primary);
+      border-radius: 999px;
+      padding: 8px 22px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 28px;
+    }
+    .cover h1 { font-size: 44px; font-weight: 700; line-height: 1.05; margin-bottom: 16px; }
+    .cover h1 span { color: var(--primary); }
+    .cover-sub { font-size: 17px; font-weight: 500; opacity: 0.88; max-width: 540px; margin-bottom: 40px; }
+    .cover-meta {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 48px;
+    }
+    .cover-chip {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .cover-footer { font-size: 13px; opacity: 0.65; font-weight: 500; }
+    .page-inner { padding: 44px 48px; }
+    .section-tag {
+      display: inline-block;
+      background: var(--primary);
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border-radius: 999px;
+      margin-bottom: 12px;
+    }
+    .section-tag.green { background: var(--green); }
+    .section-tag.blue { background: var(--primary-dark); }
+    .section-tag.orange { background: var(--orange); }
+    .section-tag.danger { background: var(--danger); }
+    .section-tag.seat { background: var(--seat-blue); }
+    h2 { font-size: 28px; font-weight: 700; line-height: 1.15; margin-bottom: 10px; }
+    h3 { font-size: 18px; font-weight: 700; margin: 22px 0 10px; }
+    .lead { font-size: 15px; color: var(--muted); font-weight: 500; margin-bottom: 22px; max-width: 680px; }
+    .info-box {
+      background: rgba(90,182,248,0.08);
+      border-left: 5px solid var(--primary);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 18px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .warn-box {
+      background: rgba(239,70,111,0.08);
+      border-left: 5px solid var(--danger);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 18px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .ok-box {
+      background: rgba(69,178,107,0.08);
+      border-left: 5px solid var(--green);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      margin-bottom: 18px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 18px;
+      font-size: 13px;
+    }
+    th {
+      text-align: left;
+      background: var(--dark);
+      color: white;
+      padding: 10px 12px;
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: 0.3px;
+    }
+    th:first-child { border-radius: 8px 0 0 0; }
+    th:last-child { border-radius: 0 8px 0 0; }
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    tr:nth-child(even) td { background: rgba(244,245,246,0.7); }
+    code {
+      background: rgba(35,38,47,0.06);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--dark);
+    }
+    pre {
+      background: var(--dark);
+      color: #e6e8ec;
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      font-size: 11.5px;
+      line-height: 1.55;
+      overflow: hidden;
+      margin-bottom: 18px;
+      white-space: pre;
+    }
+    pre .c { color: #777e90; }
+    pre .t { color: #5ab6f8; }
+    pre .a { color: #45b26b; }
+    pre .v { color: #ffd166; }
+    .tree {
+      background: #f8f9fb;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 22px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+      line-height: 1.7;
+      margin-bottom: 18px;
+      color: var(--dark-soft);
+    }
+    .tree .hl { color: var(--seat-blue); font-weight: 600; }
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+    .card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      background: white;
+    }
+    .card h4 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .card p, .card li { font-size: 13px; color: var(--muted); font-weight: 500; }
+    .card ul { padding-left: 18px; }
+    .card li { margin-bottom: 4px; }
+    .badge-yz {
+      display: inline-block;
+      background: rgba(69,178,107,0.15);
+      color: #2d8a4e;
+      font-weight: 700;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+    .badge-nz {
+      display: inline-block;
+      background: rgba(255,122,0,0.15);
+      color: #c45e00;
+      font-weight: 700;
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+    .checklist { list-style: none; margin-bottom: 18px; }
+    .checklist li {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .checklist li:last-child { border-bottom: none; }
+    .check {
+      width: 22px;
+      height: 22px;
+      border: 2px solid var(--primary);
+      border-radius: 6px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .swatch {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      vertical-align: -2px;
+      margin-right: 4px;
+      border: 1px solid rgba(0,0,0,0.1);
+    }
+    .footer-note {
+      margin-top: 28px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .mistakes { list-style: none; }
+    .mistakes li {
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: rgba(239,70,111,0.06);
+      border: 1px solid rgba(239,70,111,0.15);
+      margin-bottom: 8px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    .mistakes li strong { color: var(--danger); }
+  </style>
+</head>
+<body>
+
+  <!-- COVER -->
+  <div class="page cover">
+    <div class="cover-logo">
+      <svg viewBox="0 0 180 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <text x="0" y="24" fill="#5ab6f8" font-family="DM Sans, sans-serif" font-size="26" font-weight="700">blocktickets</text>
+      </svg>
+    </div>
+    <div class="cover-badge">Designer Handoff</div>
+    <h1>Seatmap SVG<br/><span>Structure Guide</span></h1>
+    <p class="cover-sub">
+      How to structure venue seatmap SVGs so seatmap-export can parse sections, rows, and seats correctly.
+    </p>
+    <div class="cover-meta">
+      <div class="cover-chip">Class-based naming</div>
+      <div class="cover-chip">YZ / NZ sections</div>
+      <div class="cover-chip">Brand blue #3358D4</div>
+    </div>
+    <div class="cover-footer">seatmap-export · Blocktickets</div>
+  </div>
+
+  <!-- PAGE 2: Overview + Hierarchy -->
+  <div class="page">
+    <div class="page-inner">
+      <div class="section-tag">Overview</div>
+      <h2>What the exporter needs</h2>
+      <p class="lead">
+        Deliver a standard <code>.svg</code> using Blocktickets class naming. Named hierarchy is required for reliable parsing — do not rely on unlabeled Illustrator/Figma exports.
+      </p>
+
+      <div class="info-box">
+        The parser looks for <code>sec-*</code> groups. If none are found, a fragile color/geometry fallback may run. Always use the named structure below for production maps.
+      </div>
+
+      <h3>Required hierarchy</h3>
+      <div class="tree">
+svg<br/>
+└── <span class="hl">g.sec-{SECTION} YZ|NZ</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← one group per sellable area<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;├── <span class="hl">g.sec-{SECTION}-row-{ROW}</span>&nbsp;&nbsp;← direct child of section<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;├── path …-row-…-path&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← optional row hit area<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;│&nbsp;&nbsp;&nbsp;└── rect/path …-seat-{N}&nbsp;&nbsp;&nbsp;&nbsp;← seats as direct children of row<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;└── <span class="hl">g.identifier</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;← section cover polygon<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── path
+      </div>
+
+      <div class="warn-box">
+        <strong>Critical:</strong> Rows and seats must be <strong>direct children</strong> of their parent. Extra wrapper <code>&lt;g&gt;</code> layers between section → row or row → seat will break parsing.
+      </div>
+
+      <h3>YZ vs NZ</h3>
+      <div class="two-col">
+        <div class="card">
+          <h4><span class="badge-yz">YZ</span> Yes Zoom</h4>
+          <p>Reserved seating. Rows and seats are parsed. Use for bowl and table sections.</p>
+        </div>
+        <div class="card">
+          <h4><span class="badge-nz">NZ</span> No Zoom</h4>
+          <p>GA / club / suites. Cover path only — seats are ignored even if present.</p>
+        </div>
+      </div>
+
+      <div class="footer-note">Page 2 · Seatmap SVG Structure Guide</div>
+    </div>
+  </div>
+
+  <!-- PAGE 3: Naming -->
+  <div class="page">
+    <div class="page-inner">
+      <div class="section-tag blue">Naming</div>
+      <h2>Classes, IDs &amp; tokens</h2>
+      <p class="lead">Use these exact patterns on <code>class</code> (preferred) or <code>id</code>. Section / row / seat numbers must stay consistent through the tree.</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Element</th>
+            <th>Pattern</th>
+            <th>Example</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Reserved section</td>
+            <td><code>sec-{N} YZ</code></td>
+            <td><code>class="sec-101 YZ"</code></td>
+          </tr>
+          <tr>
+            <td>GA / non-zoomable</td>
+            <td><code>sec-{N} NZ</code></td>
+            <td><code>class="sec-ga NZ"</code> or <code>id="sec-ga_NZ"</code></td>
+          </tr>
+          <tr>
+            <td>Row group</td>
+            <td><code>sec-{N}-row-{R}</code></td>
+            <td><code>sec-101-row-9</code></td>
+          </tr>
+          <tr>
+            <td>Seat</td>
+            <td><code>sec-{N}-row-{R}-seat-{S}</code></td>
+            <td><code>sec-101-row-9-seat-12</code></td>
+          </tr>
+          <tr>
+            <td>Accessible seat</td>
+            <td>add <code>_DA</code></td>
+            <td><code>sec-101-row-9-seat-3_DA</code></td>
+          </tr>
+          <tr>
+            <td>Row hit path</td>
+            <td><code>sec-{N}-row-{R}-path</code></td>
+            <td>optional, often <code>opacity="0.01"</code></td>
+          </tr>
+          <tr>
+            <td>Cover group</td>
+            <td><code>identifier</code></td>
+            <td><code>class="identifier"</code> / <code>id="identifier-101"</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Token rules</h3>
+      <ul class="checklist">
+        <li><span class="check"></span><span><strong>No hyphens inside <code>{N}</code>.</strong> Use <code>101</code>, <code>ga</code>, <code>club</code>, <code>suites</code> — not <code>north-101</code>.</span></li>
+        <li><span class="check"></span><span><strong>Match the parent.</strong> A seat named <code>sec-102-…</code> inside <code>sec-101</code> is dropped.</span></li>
+        <li><span class="check"></span><span><strong>Underscores in IDs are OK.</strong> <code>id="sec-ga_NZ"</code> normalizes to <code>class="sec-ga NZ"</code>.</span></li>
+        <li><span class="check"></span><span><strong>Optional display name:</strong> <code>data-seatmap-section-name="Club Level"</code> on the section group.</span></li>
+      </ul>
+
+      <div class="ok-box">
+        Special NZ names: <code>ga</code> → “GA Floor”, <code>club</code> → “Club”, <code>suites</code> → “Suites”. Everything else becomes “Section {N}” unless overridden.
+      </div>
+
+      <div class="footer-note">Page 3 · Seatmap SVG Structure Guide</div>
+    </div>
+  </div>
+
+  <!-- PAGE 4: Geometry + styling -->
+  <div class="page">
+    <div class="page-inner">
+      <div class="section-tag seat">Geometry &amp; styling</div>
+      <h2>Shapes, colors, transforms</h2>
+      <p class="lead">Seat geometry drives click targets. Brand blue is stripped from the background PNG so interactive seats stay selectable in admin.</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Requirement</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Root SVG</td>
+            <td>Prefer <code>viewBox</code>. Also include <code>width</code> / <code>height</code> when possible.</td>
+          </tr>
+          <tr>
+            <td>Seats</td>
+            <td>Prefer <code>&lt;rect&gt;</code> with <code>x</code>, <code>y</code>, <code>width</code>, <code>height</code>. <code>&lt;path&gt;</code> seats also work.</td>
+          </tr>
+          <tr>
+            <td>Seat fill</td>
+            <td><span class="swatch" style="background:#3358D4"></span> Exactly <code>#3358D4</code></td>
+          </tr>
+          <tr>
+            <td>Section cover</td>
+            <td>Path under <code>g.identifier</code>: fill <code>#3358D4</code>, stroke <code>#fff</code>, stroke-width ~<code>3.5</code></td>
+          </tr>
+          <tr>
+            <td>Stage / arena art</td>
+            <td>Non-blue decoration (kept in the background PNG)</td>
+          </tr>
+          <tr>
+            <td>Transforms</td>
+            <td>Only <code>rotate(180 x y)</code> / <code>rotate(-180 x y)</code> supported; pivot must equal seat <code>x</code>/<code>y</code></td>
+          </tr>
+          <tr>
+            <td>Not parsed as seats</td>
+            <td><code>&lt;circle&gt;</code>, <code>&lt;ellipse&gt;</code>, <code>&lt;text&gt;</code>, <code>&lt;use&gt;</code>, nested seat wrappers</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Typical section types</h3>
+      <div class="two-col">
+        <div class="card">
+          <h4>Bowl / reserved (YZ)</h4>
+          <ul>
+            <li>Rows with seat rects</li>
+            <li>Identifier cover path</li>
+            <li>Optional row hit path</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Tables (YZ)</h4>
+          <ul>
+            <li>Row(s) of seat rects</li>
+            <li>Optional table rect (non-seat token) as cover</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>GA / club / suites (NZ)</h4>
+          <ul>
+            <li>Identifier cover only</li>
+            <li>No seats required</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>Accessible seats</h4>
+          <ul>
+            <li>Include <code>_DA</code> or class token <code>DA</code></li>
+            <li>Example: <code>…-seat-3_DA</code></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-note">Page 4 · Seatmap SVG Structure Guide</div>
+    </div>
+  </div>
+
+  <!-- PAGE 5: Example -->
+  <div class="page">
+    <div class="page-inner">
+      <div class="section-tag green">Example</div>
+      <h2>Minimal valid SVG</h2>
+      <p class="lead">Copy this shape as a starting point. Real maps will have more sections, rows, and seats — keep the same nesting and naming.</p>
+
+<pre><span class="c">&lt;!-- Stage / arena art (non-blue) --&gt;</span>
+<span class="t">&lt;svg</span> <span class="a">xmlns</span>=<span class="v">"http://www.w3.org/2000/svg"</span> <span class="a">viewBox</span>=<span class="v">"0 0 800 600"</span><span class="t">&gt;</span>
+  <span class="t">&lt;rect</span> <span class="a">x</span>=<span class="v">"300"</span> <span class="a">y</span>=<span class="v">"250"</span> <span class="a">width</span>=<span class="v">"200"</span> <span class="a">height</span>=<span class="v">"80"</span> <span class="a">fill</span>=<span class="v">"#D9D9D9"</span><span class="t">/&gt;</span>
+
+  <span class="c">&lt;!-- Reserved section --&gt;</span>
+  <span class="t">&lt;g</span> <span class="a">id</span>=<span class="v">"sec-101"</span> <span class="a">class</span>=<span class="v">"sec-101 YZ"</span><span class="t">&gt;</span>
+    <span class="t">&lt;g</span> <span class="a">class</span>=<span class="v">"sec-101-row-1"</span> <span class="a">id</span>=<span class="v">"sec-101-row-1"</span><span class="t">&gt;</span>
+      <span class="t">&lt;rect</span> <span class="a">class</span>=<span class="v">"sec-101-row-1-seat-1"</span>
+            <span class="a">x</span>=<span class="v">"100"</span> <span class="a">y</span>=<span class="v">"100"</span> <span class="a">width</span>=<span class="v">"8.2"</span> <span class="a">height</span>=<span class="v">"8.2"</span>
+            <span class="a">fill</span>=<span class="v">"#3358D4"</span><span class="t">/&gt;</span>
+      <span class="t">&lt;rect</span> <span class="a">class</span>=<span class="v">"sec-101-row-1-seat-2"</span>
+            <span class="a">x</span>=<span class="v">"112"</span> <span class="a">y</span>=<span class="v">"100"</span> <span class="a">width</span>=<span class="v">"8.2"</span> <span class="a">height</span>=<span class="v">"8.2"</span>
+            <span class="a">fill</span>=<span class="v">"#3358D4"</span><span class="t">/&gt;</span>
+      <span class="t">&lt;rect</span> <span class="a">class</span>=<span class="v">"sec-101-row-1-seat-3_DA"</span>
+            <span class="a">x</span>=<span class="v">"124"</span> <span class="a">y</span>=<span class="v">"100"</span> <span class="a">width</span>=<span class="v">"8.2"</span> <span class="a">height</span>=<span class="v">"8.2"</span>
+            <span class="a">fill</span>=<span class="v">"#3358D4"</span><span class="t">/&gt;</span>
+    <span class="t">&lt;/g&gt;</span>
+    <span class="t">&lt;g</span> <span class="a">class</span>=<span class="v">"identifier"</span> <span class="a">id</span>=<span class="v">"identifier-101"</span><span class="t">&gt;</span>
+      <span class="t">&lt;path</span> <span class="a">d</span>=<span class="v">"M90 90 H200 V200 H90 Z"</span>
+            <span class="a">fill</span>=<span class="v">"#3358D4"</span> <span class="a">stroke</span>=<span class="v">"#fff"</span> <span class="a">stroke-width</span>=<span class="v">"3.5"</span><span class="t">/&gt;</span>
+    <span class="t">&lt;/g&gt;</span>
+  <span class="t">&lt;/g&gt;</span>
+
+  <span class="c">&lt;!-- GA floor (no seats) --&gt;</span>
+  <span class="t">&lt;g</span> <span class="a">id</span>=<span class="v">"sec-ga_NZ"</span><span class="t">&gt;</span>
+    <span class="t">&lt;g</span> <span class="a">class</span>=<span class="v">"identifier"</span> <span class="a">id</span>=<span class="v">"identifier-ga_NZ"</span><span class="t">&gt;</span>
+      <span class="t">&lt;path</span> <span class="a">d</span>=<span class="v">"M320 340 H480 V460 H320 Z"</span>
+            <span class="a">fill</span>=<span class="v">"#3358D4"</span> <span class="a">stroke</span>=<span class="v">"#fff"</span> <span class="a">stroke-width</span>=<span class="v">"3.5"</span><span class="t">/&gt;</span>
+    <span class="t">&lt;/g&gt;</span>
+  <span class="t">&lt;/g&gt;</span>
+<span class="t">&lt;/svg&gt;</span></pre>
+
+      <div class="footer-note">Page 5 · Seatmap SVG Structure Guide</div>
+    </div>
+  </div>
+
+  <!-- PAGE 6: Checklist + mistakes -->
+  <div class="page">
+    <div class="page-inner">
+      <div class="section-tag orange">Delivery</div>
+      <h2>Checklist &amp; common mistakes</h2>
+      <p class="lead">Use this before handing off the file. Validate in seatmap-export preview when possible.</p>
+
+      <h3>Designer checklist</h3>
+      <ul class="checklist">
+        <li><span class="check"></span><span>One <code>sec-{N} YZ|NZ</code> group per sellable area</span></li>
+        <li><span class="check"></span><span>Rows are <strong>direct</strong> children of sections: <code>sec-{N}-row-{R}</code></span></li>
+        <li><span class="check"></span><span>Seats are <strong>direct</strong> children of rows: <code>sec-{N}-row-{R}-seat-{S}</code> on blue <code>#3358D4</code> rects</span></li>
+        <li><span class="check"></span><span>Accessible seats use <code>_DA</code></span></li>
+        <li><span class="check"></span><span>Cover path lives under <code>g.identifier</code> (blue fill + white stroke)</span></li>
+        <li><span class="check"></span><span>GA / club / suites marked <code>NZ</code> with cover only</span></li>
+        <li><span class="check"></span><span>Stage / arena art is non-blue decoration</span></li>
+        <li><span class="check"></span><span>No hyphens inside the section slug; no extra nesting; avoid non-180 transforms</span></li>
+        <li><span class="check"></span><span>Deliver as <code>.svg</code> (or <code>.svgqc</code> from svg-map-checker)</span></li>
+      </ul>
+
+      <h3>Common mistakes that break parsing</h3>
+      <ul class="mistakes">
+        <li><strong>1.</strong> Wrapping rows/seats in extra <code>&lt;g&gt;</code> groups</li>
+        <li><strong>2.</strong> Hyphenated section slugs — <code>sec-north-101</code> fails</li>
+        <li><strong>3.</strong> Mismatched tokens — seat <code>sec-102-…</code> inside <code>sec-101</code></li>
+        <li><strong>4.</strong> Cover path not under an <code>identifier</code> group</li>
+        <li><strong>5.</strong> Seats drawn as circles/text without <code>sec-…-seat-…</code> names</li>
+        <li><strong>6.</strong> Wrong blue (anything other than <code>#3358D4</code>)</li>
+        <li><strong>7.</strong> GA marked <code>YZ</code> with no rows/cover — section may disappear</li>
+        <li><strong>8.</strong> Arbitrary transforms / nested group transforms on seats</li>
+      </ul>
+
+      <div class="info-box" style="margin-top: 20px;">
+        <strong>Validate:</strong> In seatmap-export run <code>npm run preview</code>, upload the SVG, and confirm section / row / seat clicks before admin import.
+      </div>
+
+      <div class="footer-note">Page 6 · Seatmap SVG Structure Guide · Blocktickets</div>
+    </div>
+  </div>
+
+</body>
+</html>

@@ -12,6 +12,7 @@ const {
   isBlockticketsSvg,
 } = require("./parseRawIllustrator");
 const { pathBounds, resolveCoverPath, isLabelBackdropPath } = require("./pathGeometry");
+const { sectionDisplayName } = require("./sectionLabelText");
 
 const SEAT_SIZE = 8.2;
 
@@ -82,14 +83,6 @@ function parseSectionClass(group) {
     sectionNumber: direct[1].slice(4),
     zoomable: direct[2].toUpperCase() === "YZ",
   };
-}
-
-function sectionDisplayName(sectionNumber) {
-  const normalized = String(sectionNumber).toLowerCase();
-  if (normalized === "ga") return "GA Floor";
-  if (normalized === "club") return "Club";
-  if (normalized === "suites") return "Suites";
-  return `Section ${sectionNumber}`;
 }
 
 function findIdentifierGroup(section) {

@@ -5,6 +5,59 @@ function isLabelBackdropPath(pathData) {
   return !/[CcSsQqTtAa]/.test(String(pathData).replace(/\s+/g, ""));
 }
 
+function compactSectionToken(value) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, "");
+}
+
+function isGeneralAdmissionToken(value) {
+  const compact = compactSectionToken(value);
+  if (!compact) return false;
+  if (compact === "generaladmission") return true;
+  if (compact === "ga") return true;
+  return /^ga\d+$/.test(compact);
+}
+
+function humanizeSectionLabel(sectionNumber, sectionName) {
+  const name = String(sectionName ?? "").trim();
+  if (name && !/^section\s+/i.test(name)) {
+    return name;
+  }
+
+  const raw = String(sectionNumber ?? "").trim();
+  if (!raw) return name;
+
+  if (isGeneralAdmissionToken(raw) || isGeneralAdmissionToken(name)) {
+    return "General Admission";
+  }
+
+  if (/^\d+$/.test(raw)) return raw;
+
+  if (/[\s_-]/.test(raw)) {
+    return raw
+      .replace(/[_-]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/\b\w/g, (ch) => ch.toUpperCase());
+  }
+
+  return name || raw;
+}
+
+function sectionLabelText(section) {
+  return humanizeSectionLabel(section?.sectionNumber, section?.sectionName);
+}
+
+function splitPathSubpaths(d) {
+  if (!d) return [];
+  return d
+    .split(/(?=M)/i)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
 function getSectionLabelAnchor(rect, sectionNumber) {
   const raw = String(sectionNumber ?? "").trim();
   const y = rect.y + rect.height / 2;
@@ -23,9 +76,11 @@ function computeLabelLayout(rect, label) {
   const isNumeric = /^\d+$/.test(upper);
   const isClub = upper.startsWith("CLUB");
   const text =
-    upper.includes(" ") && rect.height >= 1.4 * rect.width
+    !isNumeric && upper.includes(" ")
       ? upper.replace(/\s+/, "\n")
-      : upper;
+      : upper.includes(" ") && rect.height >= 1.4 * rect.width
+        ? upper.replace(/\s+/, "\n")
+        : upper;
   const longestLine = text
     .split("\n")
     .reduce((max, line) => Math.max(max, line.length), 1);
@@ -63,7 +118,7 @@ function computeIdentifierTransform(sectionBox, identifierBox, sectionNumber) {
 
   const rawNumber = String(sectionNumber ?? "").trim();
   const isNumeric = /^\d+$/.test(rawNumber);
-  const isGa = /^ga/i.test(rawNumber);
+  const isGa = /^ga/i.test(rawNumber) || isGeneralAdmissionToken(rawNumber);
   const widthCap = isNumeric ? 0.42 : isGa ? 0.46 : 0.5;
   const heightCap = isNumeric ? 0.28 : isGa ? 0.3 : 0.34;
   const scale = Math.min(
@@ -77,6 +132,53 @@ function computeIdentifierTransform(sectionBox, identifierBox, sectionNumber) {
   const idCenterY = identifierBox.y + identifierBox.height / 2;
 
   return `translate(${anchor.x},${anchor.y}) scale(${scale}) translate(${-idCenterX},${-idCenterY})`;
+}
+
+function isLargeLabelRegion(box) {
+  return box && box.width > 180 && box.height > 180;
+}
+
+function labelBoxesForSection(section, sectionBox, measureSvg) {
+  if (!section?.path || section.zoomable) return [sectionBox];
+
+  const subpaths = splitPathSubpaths(section.path);
+  if (subpaths.length <= 1) return [sectionBox];
+
+  const boxes = subpaths
+    .map((pathData) => measurePathBox(measureSvg, pathData))
+    .filter(isLargeLabelRegion);
+
+  return boxes.length >= 2 ? boxes : [sectionBox];
+}
+
+function appendTextLabel(labelLayer, layout) {
+  if (!layout) return;
+
+  const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+  text.setAttribute("x", layout.x);
+  text.setAttribute("y", layout.y);
+  text.setAttribute("fill", "#ffffff");
+  text.setAttribute("font-size", layout.fontSize);
+  text.setAttribute("font-weight", "700");
+  text.setAttribute(
+    "font-family",
+    'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
+  );
+  text.setAttribute("text-anchor", "middle");
+  text.setAttribute("dominant-baseline", "middle");
+  text.setAttribute("class", "section-label-text");
+
+  const lines = layout.text.split("\n");
+  const startDy = lines.length > 1 ? -((lines.length - 1) * layout.fontSize * 0.9) / 2 : 0;
+  lines.forEach((line, index) => {
+    const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+    tspan.setAttribute("x", layout.x);
+    tspan.setAttribute("dy", index === 0 ? startDy : layout.fontSize * 0.9);
+    tspan.textContent = line;
+    text.appendChild(tspan);
+  });
+
+  labelLayer.appendChild(text);
 }
 
 function appendSectionLabel(labelLayer, sectionLayer, section, measureSvg) {
@@ -108,32 +210,10 @@ function appendSectionLabel(labelLayer, sectionLayer, section, measureSvg) {
     return;
   }
 
-  const layout = computeLabelLayout(sectionBox, section.sectionNumber);
-  if (!layout) return;
-
-  const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-  text.setAttribute("x", layout.x);
-  text.setAttribute("y", layout.y);
-  text.setAttribute("fill", "#ffffff");
-  text.setAttribute("font-size", layout.fontSize);
-  text.setAttribute("font-weight", "700");
-  text.setAttribute(
-    "font-family",
-    'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
-  );
-  text.setAttribute("text-anchor", "middle");
-  text.setAttribute("dominant-baseline", "middle");
-  text.setAttribute("class", "section-label-text");
-
-  layout.text.split("\n").forEach((line, index) => {
-    const tspan = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
-    tspan.setAttribute("x", layout.x);
-    tspan.setAttribute("dy", index === 0 ? 0 : layout.fontSize * 0.9);
-    tspan.textContent = line;
-    text.appendChild(tspan);
+  const label = sectionLabelText(section);
+  labelBoxesForSection(section, sectionBox, measureSvg).forEach((box) => {
+    appendTextLabel(labelLayer, computeLabelLayout(box, label));
   });
-
-  labelLayer.appendChild(text);
 }
 
 function renderSectionPreview({ mapping, dimensions, backgroundPng, svgEl, measureSvg }) {

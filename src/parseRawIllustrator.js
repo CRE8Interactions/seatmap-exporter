@@ -5,6 +5,7 @@ const { applySellOrder } = require("./sellOrder");
 const { loadSvgInput } = require("./loadInput");
 const { findIdentifierPath } = require("./findIdentifierPath");
 const { getSvgDimensions, parseViewBox } = require("./svgDimensions");
+const { sectionDisplayName } = require("./sectionLabelText");
 const {
   pathBounds,
   pathPoints,
@@ -1126,10 +1127,7 @@ function parseRawIllustratorFromDocument(doc, options = {}) {
     const sectionEntry = {
       sectionId,
       sectionNumber: section.sectionNumber,
-      sectionName:
-        section.sectionNumber === "ga"
-          ? "GA Floor"
-          : `Section ${section.sectionNumber}`,
+      sectionName: sectionDisplayName(section.sectionNumber),
       path: section.path,
       rows: rowIds,
       zoomable: section.zoomable,

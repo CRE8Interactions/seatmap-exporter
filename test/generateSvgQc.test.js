@@ -142,3 +142,45 @@ test("stores counted seats and supplied GA capacity", () => {
     ga_1: 750,
   });
 });
+
+test("adopts GENERAL ADMISSION text labels for glued section tokens", () => {
+  const labeledSvg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+      <path d="M0 0H100V100H0Z" fill="#f5f6f7"/>
+      <text id="GENERAL_ADMISSION" transform="translate(20 25)" fill="white" font-size="12">
+        <tspan>GENERAL</tspan>
+        <tspan>ADMISSION</tspan>
+      </text>
+      <text id="GENERAL_ADMISSION_2" transform="translate(70 75)" fill="white" font-size="12">
+        <tspan>GENERAL</tspan>
+        <tspan>ADMISSION</tspan>
+      </text>
+    </svg>
+  `;
+  const gaMapping = {
+    sections: {
+      ga: {
+        sectionId: "ga",
+        sectionNumber: "generaladmission",
+        sectionName: "General Admission",
+        path: "M10 10H40V40H10Z M60 60H90V90H60Z",
+        rows: [],
+        zoomable: false,
+        fill: "#3358D4",
+      },
+    },
+    rows: {},
+    seats: {},
+  };
+
+  const svg = generateSvgQcSvg(labeledSvg, gaMapping);
+  const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+  const sectionGroup = Array.from(doc.getElementsByTagName("g")).find(
+    (group) => group.getAttribute("class") === "sec-generaladmission NZ"
+  );
+  assert.ok(sectionGroup);
+  const labels = Array.from(sectionGroup.getElementsByTagName("text"));
+  assert.equal(labels.length, 2);
+  assert.match(labels[0].textContent, /GENERAL/i);
+  assert.match(labels[0].textContent, /ADMISSION/i);
+});

@@ -1,6 +1,10 @@
 const { DOMParser, XMLSerializer } = require("@xmldom/xmldom");
 const { generateBackgroundSvg } = require("./generateBackground");
 const { pathBounds } = require("./pathGeometry");
+const {
+  humanizeSectionLabel,
+  sectionLabelLookupKeys,
+} = require("./sectionLabelText");
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const DEFAULT_SEAT_FILL = "#3358D4";
@@ -97,23 +101,31 @@ function collectSectionTextLabels(doc) {
   Array.from(doc.getElementsByTagName("text")).forEach((textEl) => {
     const content = textContent(textEl);
     if (!content) return;
-    const key = checkerToken(content);
-    if (!byKey.has(key)) byKey.set(key, []);
-    byKey.get(key).push(textEl);
+    const keys = [
+      checkerToken(content).toLowerCase(),
+      content.toLowerCase().replace(/[\s_-]+/g, ""),
+    ];
+    const primary = keys[0];
+    if (!byKey.has(primary)) byKey.set(primary, []);
+    byKey.get(primary).push(textEl);
+    keys.forEach((key) => {
+      if (!byKey.has(key)) byKey.set(key, byKey.get(primary));
+    });
   });
   return byKey;
 }
 
-function adoptSectionTextLabels(sectionNumber, textLabels) {
-  const keys = new Set([
-    checkerToken(sectionNumber),
-    checkerToken(`Section ${sectionNumber}`),
-  ]);
+function adoptSectionTextLabels(sectionNumber, textLabels, sectionName) {
+  const keys = sectionLabelLookupKeys(sectionNumber, sectionName);
   const adopted = [];
+  const seen = new Set();
   keys.forEach((key) => {
-    const matches = textLabels.get(key) || [];
+    const matches = textLabels.get(String(key).toLowerCase()) || [];
     while (matches.length) {
-      adopted.push(matches.shift());
+      const textEl = matches.shift();
+      if (!textEl || seen.has(textEl)) continue;
+      seen.add(textEl);
+      adopted.push(textEl);
     }
   });
   return adopted;
@@ -124,7 +136,7 @@ function appendSyntheticLabel(doc, identifierGroup, section, sectionNumber) {
   const bounds = pathBounds(section.path);
   if (!bounds || bounds.w <= 0 || bounds.h <= 0) return;
 
-  const label = String(section.sectionNumber);
+  const label = humanizeSectionLabel(section.sectionNumber, section.sectionName);
   const fontSize = Math.max(
     12,
     Math.min(56, Math.min(bounds.w, bounds.h) * 0.24)
@@ -180,7 +192,8 @@ function appendSectionVisual(doc, sectionGroup, section, textLabels) {
 
   const adoptedLabels = adoptSectionTextLabels(
     section.sectionNumber,
-    textLabels
+    textLabels,
+    section.sectionName
   );
   if (adoptedLabels.length) {
     adoptedLabels.forEach((textEl) => {

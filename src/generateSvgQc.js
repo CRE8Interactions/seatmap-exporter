@@ -1,5 +1,6 @@
 const { DOMParser, XMLSerializer } = require("@xmldom/xmldom");
 const { generateBackgroundSvg } = require("./generateBackground");
+const { pathBounds } = require("./pathGeometry");
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const DEFAULT_SEAT_FILL = "#3358D4";
@@ -85,12 +86,73 @@ function stripSourceSectionSemantics(parent) {
   });
 }
 
-function appendSectionVisual(doc, sectionGroup, section) {
+function textContent(el) {
+  return String(el.textContent || "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function collectSectionTextLabels(doc) {
+  const byKey = new Map();
+  Array.from(doc.getElementsByTagName("text")).forEach((textEl) => {
+    const content = textContent(textEl);
+    if (!content) return;
+    const key = checkerToken(content);
+    if (!byKey.has(key)) byKey.set(key, []);
+    byKey.get(key).push(textEl);
+  });
+  return byKey;
+}
+
+function adoptSectionTextLabels(sectionNumber, textLabels) {
+  const keys = new Set([
+    checkerToken(sectionNumber),
+    checkerToken(`Section ${sectionNumber}`),
+  ]);
+  const adopted = [];
+  keys.forEach((key) => {
+    const matches = textLabels.get(key) || [];
+    while (matches.length) {
+      adopted.push(matches.shift());
+    }
+  });
+  return adopted;
+}
+
+function appendSyntheticLabel(doc, identifierGroup, section, sectionNumber) {
+  if (!section.path) return;
+  const bounds = pathBounds(section.path);
+  if (!bounds || bounds.w <= 0 || bounds.h <= 0) return;
+
+  const label = String(section.sectionNumber);
+  const fontSize = Math.max(
+    12,
+    Math.min(56, Math.min(bounds.w, bounds.h) * 0.24)
+  );
+  const text = doc.createElementNS(SVG_NS, "text");
+  setAttributes(text, {
+    class: `sec-${sectionNumber}-label`,
+    x: bounds.cx,
+    y: bounds.cy,
+    fill: "#ffffff",
+    "font-size": fontSize,
+    "font-weight": "500",
+    "font-family":
+      'Inter, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+    "text-anchor": "middle",
+    "dominant-baseline": "middle",
+    "pointer-events": "none",
+  });
+  text.appendChild(doc.createTextNode(label));
+  identifierGroup.appendChild(text);
+}
+
+function appendSectionVisual(doc, sectionGroup, section, textLabels) {
   if (!section.path && !section.identifier?.path) return;
 
   const sectionNumber = checkerToken(section.sectionNumber);
   const identifierGroup = doc.createElementNS(SVG_NS, "g");
-  identifierGroup.setAttribute("class", "identifier");
+  identifierGroup.setAttribute("class", `identifier sec-${sectionNumber}`);
 
   if (section.path) {
     const cover = doc.createElementNS(SVG_NS, "path");
@@ -114,6 +176,24 @@ function appendSectionVisual(doc, sectionGroup, section) {
       "pointer-events": "none",
     });
     identifierGroup.appendChild(identifier);
+  }
+
+  const adoptedLabels = adoptSectionTextLabels(
+    section.sectionNumber,
+    textLabels
+  );
+  if (adoptedLabels.length) {
+    adoptedLabels.forEach((textEl) => {
+      textEl.setAttribute(
+        "class",
+        `${(textEl.getAttribute("class") || "").trim()} sec-${sectionNumber}-label`.trim()
+      );
+      textEl.setAttribute("pointer-events", "none");
+      if (textEl.parentNode) textEl.parentNode.removeChild(textEl);
+      identifierGroup.appendChild(textEl);
+    });
+  } else if (!section.identifier?.path) {
+    appendSyntheticLabel(doc, identifierGroup, section, sectionNumber);
   }
 
   sectionGroup.appendChild(identifierGroup);
@@ -155,6 +235,7 @@ function generateSvgQcSvg(svgString, mapping) {
   const doc = new DOMParser().parseFromString(backgroundSvg, "image/svg+xml");
   const root = doc.documentElement;
   stripSourceSectionSemantics(root);
+  const textLabels = collectSectionTextLabels(root);
   const layer = doc.createElementNS(SVG_NS, "g");
   layer.setAttribute("data-svgqc-layer", "1");
 
@@ -168,12 +249,13 @@ function generateSvgQcSvg(svgString, mapping) {
         "data-seatmap-section-name": section.sectionName,
       });
 
-      appendSectionVisual(doc, sectionGroup, section);
       if (section.zoomable) {
         sectionRows(mapping, section).forEach((row) => {
           appendRow(doc, sectionGroup, mapping, section, row);
         });
       }
+      // Covers/labels must paint above seats so zoomed-out QC hides seat dots.
+      appendSectionVisual(doc, sectionGroup, section, textLabels);
 
       layer.appendChild(sectionGroup);
     });

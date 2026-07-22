@@ -14,6 +14,9 @@ const sourceSvg = `
       <path d="M10 10H40V40H10Z" fill="#cccccc"/>
       <rect class="sec-101-row-A-seat-2 DA" x="18" y="12" width="4" height="4" fill="#2DEDB4"/>
     </g>
+    <text id="101_label" transform="translate(20 25)" fill="white" font-size="12">
+      <tspan>101</tspan>
+    </text>
   </svg>
 `;
 
@@ -37,7 +40,6 @@ const mapping = {
       rows: [],
       zoomable: false,
       fill: "#3358D4",
-      identifier: { path: null },
     },
   },
   rows: {
@@ -102,6 +104,30 @@ test("generates checker-compatible seat and GA classes", () => {
   assert.equal(reparsed.stats.sections, 2);
   assert.equal(reparsed.stats.seats, 2);
   assert.equal(reparsed.stats.gaSections, 1);
+});
+
+test("paints covers above seats and keeps section labels on top", () => {
+  const svg = generateSvgQcSvg(sourceSvg, mapping);
+  const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
+  const sectionGroup = Array.from(doc.getElementsByTagName("g")).find(
+    (group) => group.getAttribute("class") === "sec-101 YZ"
+  );
+  assert.ok(sectionGroup);
+
+  const children = Array.from(sectionGroup.childNodes).filter(
+    (node) => node.nodeType === 1
+  );
+  assert.equal(children[0].getAttribute("class"), "sec-101-row-A");
+  assert.equal(children[1].getAttribute("class"), "identifier sec-101");
+
+  const identifier = children[1];
+  const identifierChildren = Array.from(identifier.childNodes).filter(
+    (node) => node.nodeType === 1
+  );
+  assert.equal(identifierChildren[0].tagName.toLowerCase(), "path");
+  assert.equal(identifierChildren[0].getAttribute("class"), "sec-101");
+  assert.equal(identifierChildren[1].tagName.toLowerCase(), "text");
+  assert.match(identifierChildren[1].textContent, /101/);
 });
 
 test("stores counted seats and supplied GA capacity", () => {

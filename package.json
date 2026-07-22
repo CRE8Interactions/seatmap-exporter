@@ -9,6 +9,7 @@
     "start": "node server.js",
     "export": "node bin/export.js",
     "preview": "node server.js",
+    "test": "node --test",
     "test:mexican": "node bin/export.js ../svg-map-checker/public/pa-mexican-concert.svgqc -o /tmp/mexican-mapping.json",
     "test:raw-mexican": "node bin/export.js /Users/chazhaskins/Downloads/Mexican-Heritage-12-tables.svg -o output/mexican-heritage-12-tables.json --background output/mexican-heritage-background.png --meta output/mexican-heritage-meta.json --pretty --stats",
     "audit": "node scripts/audit-mapping.js"

@@ -1,6 +1,6 @@
 # seatmap-export
 
-Convert Blocktickets seatmap SVG files into the JSON mapping format used by admin, frontend, and box office.
+Convert Blocktickets seatmap SVG files into the JSON mapping format used by admin, frontend, and box office, or into `.svgqc` projects for SVG Map Quality Checker.
 
 No web UI — just a CLI:
 
@@ -44,11 +44,14 @@ Upload that JSON plus a PNG background image to create a seatmap in admin.
 
 Section highlight PNGs (for the purchase flow `ViewSwiper`) can be generated with `--highlights-dir`. Upload them to your CDN at `venues/<venue-slug>/highlights/<section-number>.png`.
 
+The preview UI and `--svgqc-output` can also create an SVG Quality Checker project. Its embedded SVG is rebuilt with checker-compatible `sec-<section>-row-<row>-seat-<seat>` rectangles and `sec-<section> NZ` GA groups. The project stores regular seat counts and entered GA capacities in its `capacities` object.
+
 ## Options
 
 | Flag | Description |
 |------|-------------|
 | `-o, --output` | Output file (default: stdout) |
+| `--svgqc-output <file>` | Write a `.svgqc` project for SVG Map Quality Checker |
 | `--ga-spots N` | Add `spots: [uuid, ...]` to each NZ/GA section |
 | `--hotspot-x`, `--hotspot-y` | Place a sell-order hotspot in SVG coordinates (requires both) |
 | `--target-sections` | Comma-separated section UUIDs for multi-floor sell order |
@@ -58,7 +61,7 @@ Section highlight PNGs (for the purchase flow `ViewSwiper`) can be generated wit
 
 ## Preview UI
 
-Upload an SVG, preview the generated mapping over a stripped background PNG, and download exports:
+Upload an SVG, preview the generated mapping over a stripped background PNG, and download mapping JSON, `.svgqc`, and image exports:
 
 ```bash
 npm install
@@ -87,6 +90,7 @@ See `.do/app.yaml` for a starter app spec.
 
 ```bash
 node bin/export.js path/to/map.svg -o mapping.json --stats
+node bin/export.js path/to/map.svg --svgqc-output map.svgqc --ga-spots 500
 node bin/export.js map.svg \
   -o mapping.json \
   --background background.png \

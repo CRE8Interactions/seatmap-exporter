@@ -3,8 +3,9 @@ const multer = require("multer");
 const path = require("path");
 const { DOMParser } = require("@xmldom/xmldom");
 const { parseSeatmap } = require("./src/parseSeatmap");
-const { loadUploadedSvg } = require("./src/loadInput");
+const { loadUploadedProject } = require("./src/loadInput");
 const { generateBackgroundSvg } = require("./src/generateBackground");
+const { generateSvgQcSvg } = require("./src/generateSvgQc");
 const { getSvgDimensions } = require("./src/svgDimensions");
 const { renderBackgroundPng } = require("./src/renderBackgroundPng");
 const {
@@ -29,7 +30,8 @@ app.post("/api/process", upload.single("svg"), (req, res) => {
       return res.status(400).json({ error: "SVG file is required." });
     }
 
-    const svgString = loadUploadedSvg(req.file);
+    const inputProject = loadUploadedProject(req.file);
+    const svgString = inputProject.svg;
     const gaSpots = parseInt(req.body.gaSpots || "0", 10) || 0;
     const { mapping, stats } = parseSeatmap(svgString, { gaSpots });
     const doc = new DOMParser().parseFromString(svgString, "image/svg+xml");
@@ -81,6 +83,8 @@ app.post("/api/process", upload.single("svg"), (req, res) => {
       backgroundSvg,
       backgroundPng,
       sectionHighlights,
+      svgQcSvg: generateSvgQcSvg(svgString, mapping),
+      capacities: inputProject.capacities,
     });
   } catch (error) {
     res.status(500).json({ error: error.message || "Failed to process SVG." });

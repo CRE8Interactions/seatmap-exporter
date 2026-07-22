@@ -2,9 +2,10 @@
 const fs = require("fs");
 const path = require("path");
 const { DOMParser } = require("@xmldom/xmldom");
-const { loadSvgInput } = require("../src/loadInput");
+const { loadSvgProject } = require("../src/loadInput");
 const { parseSeatmap } = require("../src/parseSeatmap");
 const { generateBackgroundSvg } = require("../src/generateBackground");
+const { createSvgQcProject } = require("../src/generateSvgQc");
 const { getSvgDimensions } = require("../src/svgDimensions");
 const { renderBackgroundPng } = require("../src/renderBackgroundPng");
 const { generateSectionHighlights } = require("../src/generateSectionHighlights");
@@ -15,6 +16,7 @@ function usage() {
 
 Options:
   -o, --output <file>     Write mapping JSON (default: stdout)
+  --svgqc-output <file>    Write an SVG Quality Checker project
   --background <file.png>   Write background PNG with seats/sections removed
   --background-svg <file> Write stripped background SVG
   --highlights-dir <dir>  Write section highlight PNGs (one per section)
@@ -28,6 +30,7 @@ Options:
 
 Examples:
   seatmap-export venue.svg -o venue-mapping.json --background venue-bg.png --highlights-dir highlights
+  seatmap-export venue.svg --svgqc-output venue.svgqc --ga-spots 500
   seatmap-export map.svgqc --ga-spots 500 -o map.json --stats
   seatmap-export venue.svg -o venue-mapping.json --hotspot-x 1200 --hotspot-y 800
   npm run preview
@@ -38,6 +41,7 @@ function parseArgs(argv) {
   const args = {
     input: null,
     output: null,
+    svgQcOutput: null,
     background: null,
     backgroundSvg: null,
     highlightsDir: null,
@@ -58,6 +62,10 @@ function parseArgs(argv) {
     }
     if (arg === "-o" || arg === "--output") {
       args.output = argv[++i];
+      continue;
+    }
+    if (arg === "--svgqc-output") {
+      args.svgQcOutput = argv[++i];
       continue;
     }
     if (arg === "--ga-spots") {
@@ -129,7 +137,8 @@ function main() {
     process.exit(1);
   }
 
-  const svg = loadSvgInput(inputPath);
+  const inputProject = loadSvgProject(inputPath);
+  const svg = inputProject.svg;
   const parseOptions = { gaSpots: args.gaSpots || 0 };
 
   if (args.hotspotX !== null || args.hotspotY !== null) {
@@ -149,6 +158,24 @@ function main() {
   const doc = new DOMParser().parseFromString(svg, "image/svg+xml");
   const dimensions = getSvgDimensions(doc);
   const json = JSON.stringify(exportMapping, null, args.pretty ? 2 : undefined);
+
+  if (args.svgQcOutput) {
+    const capacities = { ...inputProject.capacities };
+    if (args.gaSpots > 0) {
+      Object.values(mapping.sections)
+        .filter((section) => !section.zoomable)
+        .forEach((section) => {
+          capacities[String(section.sectionNumber)] = args.gaSpots;
+        });
+    }
+    const svgQcProject = createSvgQcProject(svg, mapping, { capacities });
+    fs.writeFileSync(
+      path.resolve(args.svgQcOutput),
+      JSON.stringify(svgQcProject, null, args.pretty ? 2 : undefined),
+      "utf8"
+    );
+    console.error(`Wrote ${args.svgQcOutput}`);
+  }
 
   let backgroundPngBuffer = null;
 
@@ -203,7 +230,7 @@ function main() {
       console.error(JSON.stringify({ input: path.basename(inputPath), ...stats }, null, 2));
     }
     console.error(`Wrote ${args.output}`);
-  } else {
+  } else if (!args.svgQcOutput) {
     process.stdout.write(json);
     if (!json.endsWith("\n")) process.stdout.write("\n");
     if (args.stats) {

@@ -71,7 +71,7 @@ processBtn.addEventListener("click", async () => {
     latestResult = payload;
     statsEl.textContent = JSON.stringify(payload.stats, null, 2);
     statsPanel.classList.remove("hidden");
-    renderGaCapacityPanel(payload.mapping);
+    renderGaCapacityPanel(payload.mapping, payload.capacities);
     previewPanel.classList.remove("hidden");
     sectionPreviewPanel.classList.remove("hidden");
     renderHighlightsPanel(payload);
@@ -199,7 +199,11 @@ function gaSections(mapping) {
     );
 }
 
-function renderGaCapacityPanel(mapping) {
+function svgQcSectionNumber(sectionNumber) {
+  return String(sectionNumber).trim().replace(/[\s-]+/g, "_");
+}
+
+function renderGaCapacityPanel(mapping, importedCapacities = {}) {
   const sections = gaSections(mapping);
   gaCapacityList.innerHTML = "";
 
@@ -213,7 +217,14 @@ function renderGaCapacityPanel(mapping) {
   gaCapacityPanel.classList.remove("hidden");
 
   sections.forEach((section) => {
-    gaCapacities[section.sectionId] = 0;
+    const importedCapacity = Math.max(
+      0,
+      Number(
+        importedCapacities[String(section.sectionNumber)] ??
+          importedCapacities[svgQcSectionNumber(section.sectionNumber)]
+      ) || 0
+    );
+    gaCapacities[section.sectionId] = importedCapacity;
 
     const row = document.createElement("div");
     row.className = "ga-capacity-row";
@@ -236,7 +247,7 @@ function renderGaCapacityPanel(mapping) {
         type="number"
         min="0"
         step="1"
-        value="0"
+        value="${importedCapacity}"
         data-section-id="${section.sectionId}"
       />
     `;
@@ -346,6 +357,21 @@ function getExportMapping() {
   return prepareMappingForExport(applyGaSpotsToMapping(latestResult.mapping));
 }
 
+function getSvgQcCapacities(mapping) {
+  const capacities = {};
+
+  Object.values(mapping.sections).forEach((section) => {
+    const sectionNumber = svgQcSectionNumber(section.sectionNumber);
+    capacities[sectionNumber] = section.zoomable
+      ? Object.values(mapping.seats).filter(
+          (seat) => seat.sectionId === section.sectionId
+        ).length
+      : gaCapacities[section.sectionId] || 0;
+  });
+
+  return capacities;
+}
+
 previewStage.addEventListener("click", (event) => {
   if (event.target.closest(".seat-dot-interactive")) return;
   hideSeatTooltip();
@@ -361,6 +387,20 @@ document.getElementById("downloadJsonBtn").addEventListener("click", () => {
   downloadBlob(
     JSON.stringify(exportMapping, null, 2),
     "seatmap-mapping.json",
+    "application/json"
+  );
+});
+
+document.getElementById("downloadSvgQcBtn").addEventListener("click", () => {
+  if (!latestResult?.svgQcSvg) return;
+  const project = {
+    version: 1,
+    svg: latestResult.svgQcSvg,
+    capacities: getSvgQcCapacities(latestResult.mapping),
+  };
+  downloadBlob(
+    JSON.stringify(project),
+    "seatmap.svgqc",
     "application/json"
   );
 });

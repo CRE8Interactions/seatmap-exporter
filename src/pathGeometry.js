@@ -405,6 +405,8 @@ function resolveCoverPath(d) {
     return { path: d, identifierPath: null };
   }
 
+  // Only curved (outlined number) subpaths are label glyphs. Small rects are
+  // often cover extensions into aisles/vomitories — keep those in the cover.
   const identifierCandidates = scored.filter(
     (entry) =>
       entry !== primary &&
@@ -419,9 +421,14 @@ function resolveCoverPath(d) {
     return a.area - b.area;
   });
 
+  const identifierPath = identifierCandidates[0]?.path || null;
+  const coverPath = identifierPath
+    ? subpaths.filter((path) => path !== identifierPath).join("")
+    : d;
+
   return {
-    path: primary?.path || d,
-    identifierPath: identifierCandidates[0]?.path || null,
+    path: coverPath || primary?.path || d,
+    identifierPath,
   };
 }
 
